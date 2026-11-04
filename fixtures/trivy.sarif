@@ -1,0 +1,274 @@
+{
+ "version": "2.1.0",
+ "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
+ "runs": [
+  {
+   "tool": {
+    "driver": {
+     "fullName": "Trivy Vulnerability Scanner",
+     "informationUri": "https://github.com/aquasecurity/trivy",
+     "name": "Trivy",
+     "rules": [
+      {
+       "id": "CVE-2019-19844",
+       "name": "LanguageSpecificPackageVulnerability",
+       "shortDescription": {
+        "text": "Django: crafted email address allows account takeover"
+       },
+       "fullDescription": {
+        "text": "Django before 1.11.27, 2.x before 2.2.9, and 3.x before 3.0.1 allows account takeover. A suitably crafted email address (that is equal to an existing user's email address after case transformation of Unicode characters) would allow an attacker to be sent a password reset token for the matched user account. (One mitigation in the new releases is to send password reset tokens only to the registered user email address.)"
+       },
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "helpUri": "https://avd.aquasec.com/nvd/cve-2019-19844",
+       "help": {
+        "text": "Vulnerability CVE-2019-19844\nSeverity: CRITICAL\nPackage: django\nFixed Version: 1.11.27, 2.2.9, 3.0.1\nLink: [CVE-2019-19844](https://avd.aquasec.com/nvd/cve-2019-19844)\nDjango before 1.11.27, 2.x before 2.2.9, and 3.x before 3.0.1 allows account takeover. A suitably crafted email address (that is equal to an existing user's email address after case transformation of Unicode characters) would allow an attacker to be sent a password reset token for the matched user account. (One mitigation in the new releases is to send password reset tokens only to the registered user email address.)",
+        "markdown": "**Vulnerability CVE-2019-19844**\n| Severity | Package | Fixed Version | Link |\n| --- | --- | --- | --- |\n|CRITICAL|django|1.11.27, 2.2.9, 3.0.1|[CVE-2019-19844](https://avd.aquasec.com/nvd/cve-2019-19844)|\n\nDjango before 1.11.27, 2.x before 2.2.9, and 3.x before 3.0.1 allows account takeover. A suitably crafted email address (that is equal to an existing user's email address after case transformation of Unicode characters) would allow an attacker to be sent a password reset token for the matched user account. (One mitigation in the new releases is to send password reset tokens only to the registered user email address.)"
+       },
+       "properties": {
+        "cvssv3_baseScore": 9.8,
+        "cvssv3_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        "cvssv40_baseScore": 9.3,
+        "cvssv40_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+        "precision": "very-high",
+        "security-severity": "9.8",
+        "tags": [
+         "vulnerability",
+         "security",
+         "CRITICAL"
+        ]
+       }
+      },
+      {
+       "id": "CVE-2020-7471",
+       "name": "LanguageSpecificPackageVulnerability",
+       "shortDescription": {
+        "text": "django: potential SQL injection via StringAgg(delimiter)"
+       },
+       "fullDescription": {
+        "text": "Django 1.11 before 1.11.28, 2.2 before 2.2.10, and 3.0 before 3.0.3 allows SQL Injection if untrusted data is used as a StringAgg delimiter (e.g., in Django applications that offer downloads of data as a series of rows with a user-specified column delimiter). By passing a suitably crafted delimiter to a contrib.postgres.aggregates.StringAgg instance, it was possible to break escaping and inject malicious SQL."
+       },
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "helpUri": "https://avd.aquasec.com/nvd/cve-2020-7471",
+       "help": {
+        "text": "Vulnerability CVE-2020-7471\nSeverity: CRITICAL\nPackage: django\nFixed Version: 1.11.28, 2.2.10, 3.0.3\nLink: [CVE-2020-7471](https://avd.aquasec.com/nvd/cve-2020-7471)\nDjango 1.11 before 1.11.28, 2.2 before 2.2.10, and 3.0 before 3.0.3 allows SQL Injection if untrusted data is used as a StringAgg delimiter (e.g., in Django applications that offer downloads of data as a series of rows with a user-specified column delimiter). By passing a suitably crafted delimiter to a contrib.postgres.aggregates.StringAgg instance, it was possible to break escaping and inject malicious SQL.",
+        "markdown": "**Vulnerability CVE-2020-7471**\n| Severity | Package | Fixed Version | Link |\n| --- | --- | --- | --- |\n|CRITICAL|django|1.11.28, 2.2.10, 3.0.3|[CVE-2020-7471](https://avd.aquasec.com/nvd/cve-2020-7471)|\n\nDjango 1.11 before 1.11.28, 2.2 before 2.2.10, and 3.0 before 3.0.3 allows SQL Injection if untrusted data is used as a StringAgg delimiter (e.g., in Django applications that offer downloads of data as a series of rows with a user-specified column delimiter). By passing a suitably crafted delimiter to a contrib.postgres.aggregates.StringAgg instance, it was possible to break escaping and inject malicious SQL."
+       },
+       "properties": {
+        "cvssv3_baseScore": 9.8,
+        "cvssv3_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H",
+        "cvssv40_baseScore": 9.3,
+        "cvssv40_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N",
+        "precision": "very-high",
+        "security-severity": "9.8",
+        "tags": [
+         "vulnerability",
+         "security",
+         "CRITICAL"
+        ]
+       }
+      },
+      {
+       "id": "CVE-2025-64459",
+       "name": "LanguageSpecificPackageVulnerability",
+       "shortDescription": {
+        "text": "django: Django SQL injection"
+       },
+       "fullDescription": {
+        "text": "An issue was discovered in 5.1 before 5.1.14, 4.2 before 4.2.26, and 5.2 before 5.2.8.\nThe methods `QuerySet.filter()`, `QuerySet.exclude()`, and `QuerySet.get()`, and the class `Q()`, are subject to SQL injection when using a suitably crafted dictionary, with dictionary expansion, as the `_connector` argument.\nEarlier, unsupported Django series (such as 5.0.x, 4.1.x, and 3.2.x) were not evaluated and may also be affected.\nDjango would like to thank cyberstan for reporting this issue."
+       },
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "helpUri": "https://avd.aquasec.com/nvd/cve-2025-64459",
+       "help": {
+        "text": "Vulnerability CVE-2025-64459\nSeverity: CRITICAL\nPackage: django\nFixed Version: 5.2.8, 5.1.14, 4.2.26\nLink: [CVE-2025-64459](https://avd.aquasec.com/nvd/cve-2025-64459)\nAn issue was discovered in 5.1 before 5.1.14, 4.2 before 4.2.26, and 5.2 before 5.2.8.\nThe methods `QuerySet.filter()`, `QuerySet.exclude()`, and `QuerySet.get()`, and the class `Q()`, are subject to SQL injection when using a suitably crafted dictionary, with dictionary expansion, as the `_connector` argument.\nEarlier, unsupported Django series (such as 5.0.x, 4.1.x, and 3.2.x) were not evaluated and may also be affected.\nDjango would like to thank cyberstan for reporting this issue.",
+        "markdown": "**Vulnerability CVE-2025-64459**\n| Severity | Package | Fixed Version | Link |\n| --- | --- | --- | --- |\n|CRITICAL|django|5.2.8, 5.1.14, 4.2.26|[CVE-2025-64459](https://avd.aquasec.com/nvd/cve-2025-64459)|\n\nAn issue was discovered in 5.1 before 5.1.14, 4.2 before 4.2.26, and 5.2 before 5.2.8.\nThe methods `QuerySet.filter()`, `QuerySet.exclude()`, and `QuerySet.get()`, and the class `Q()`, are subject to SQL injection when using a suitably crafted dictionary, with dictionary expansion, as the `_connector` argument.\nEarlier, unsupported Django series (such as 5.0.x, 4.1.x, and 3.2.x) were not evaluated and may also be affected.\nDjango would like to thank cyberstan for reporting this issue."
+       },
+       "properties": {
+        "cvssv3_baseScore": 9.1,
+        "cvssv3_vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:N",
+        "precision": "very-high",
+        "security-severity": "9.1",
+        "tags": [
+         "vulnerability",
+         "security",
+         "CRITICAL"
+        ]
+       }
+      },
+      {
+       "id": "CVE-2018-6188",
+       "name": "LanguageSpecificPackageVulnerability",
+       "shortDescription": {
+        "text": "django: Information leakage in AuthenticationForm"
+       },
+       "fullDescription": {
+        "text": "django.contrib.auth.forms.AuthenticationForm in Django 2.0 before 2.0.2, and 1.11.8 and 1.11.9, allows remote attackers to obtain potentially sensitive information by leveraging data exposure from the confirm_login_allowed() method, as demonstrated by discovering whether a user account is inactive."
+       },
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "helpUri": "https://avd.aquasec.com/nvd/cve-2018-6188",
+       "help": {
+        "text": "Vulnerability CVE-2018-6188\nSeverity: HIGH\nPackage: django\nFixed Version: 2.0.2, 1.11.10\nLink: [CVE-2018-6188](https://avd.aquasec.com/nvd/cve-2018-6188)\ndjango.contrib.auth.forms.AuthenticationForm in Django 2.0 before 2.0.2, and 1.11.8 and 1.11.9, allows remote attackers to obtain potentially sensitive information by leveraging data exposure from the confirm_login_allowed() method, as demonstrated by discovering whether a user account is inactive.",
+        "markdown": "**Vulnerability CVE-2018-6188**\n| Severity | Package | Fixed Version | Link |\n| --- | --- | --- | --- |\n|HIGH|django|2.0.2, 1.11.10|[CVE-2018-6188](https://avd.aquasec.com/nvd/cve-2018-6188)|\n\ndjango.contrib.auth.forms.AuthenticationForm in Django 2.0 before 2.0.2, and 1.11.8 and 1.11.9, allows remote attackers to obtain potentially sensitive information by leveraging data exposure from the confirm_login_allowed() method, as demonstrated by discovering whether a user account is inactive."
+       },
+       "properties": {
+        "cvssv3_baseScore": 7.5,
+        "cvssv3_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+        "cvssv40_baseScore": 8.7,
+        "cvssv40_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N",
+        "precision": "very-high",
+        "security-severity": "7.5",
+        "tags": [
+         "vulnerability",
+         "security",
+         "HIGH"
+        ]
+       }
+      },
+      {
+       "id": "CVE-2019-3498",
+       "name": "LanguageSpecificPackageVulnerability",
+       "shortDescription": {
+        "text": "python-django: Content spoofing via URL path in default 404 page"
+       },
+       "fullDescription": {
+        "text": "In Django 1.11.x before 1.11.18, 2.0.x before 2.0.10, and 2.1.x before 2.1.5, an Improper Neutralization of Special Elements in Output Used by a Downstream Component issue exists in django.views.defaults.page_not_found(), leading to content spoofing (in a 404 error page) if a user fails to recognize that a crafted URL has malicious content."
+       },
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "helpUri": "https://avd.aquasec.com/nvd/cve-2019-3498",
+       "help": {
+        "text": "Vulnerability CVE-2019-3498\nSeverity: HIGH\nPackage: django\nFixed Version: 1.11.18, 2.0.10, 2.1.5\nLink: [CVE-2019-3498](https://avd.aquasec.com/nvd/cve-2019-3498)\nIn Django 1.11.x before 1.11.18, 2.0.x before 2.0.10, and 2.1.x before 2.1.5, an Improper Neutralization of Special Elements in Output Used by a Downstream Component issue exists in django.views.defaults.page_not_found(), leading to content spoofing (in a 404 error page) if a user fails to recognize that a crafted URL has malicious content.",
+        "markdown": "**Vulnerability CVE-2019-3498**\n| Severity | Package | Fixed Version | Link |\n| --- | --- | --- | --- |\n|HIGH|django|1.11.18, 2.0.10, 2.1.5|[CVE-2019-3498](https://avd.aquasec.com/nvd/cve-2019-3498)|\n\nIn Django 1.11.x before 1.11.18, 2.0.x before 2.0.10, and 2.1.x before 2.1.5, an Improper Neutralization of Special Elements in Output Used by a Downstream Component issue exists in django.views.defaults.page_not_found(), leading to content spoofing (in a 404 error page) if a user fails to recognize that a crafted URL has malicious content."
+       },
+       "properties": {
+        "cvssv3_baseScore": 6.5,
+        "cvssv3_vector": "CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:N/I:H/A:N",
+        "cvssv40_baseScore": 7.1,
+        "cvssv40_vector": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:P/VC:N/VI:H/VA:N/SC:N/SI:N/SA:N",
+        "precision": "very-high",
+        "security-severity": "6.5",
+        "tags": [
+         "vulnerability",
+         "security",
+         "HIGH"
+        ]
+       }
+      }
+     ],
+     "version": "0.76.1"
+    }
+   },
+   "results": [
+    {
+     "ruleId": "CVE-2019-19844",
+     "ruleIndex": 0,
+     "level": "error",
+     "message": {
+      "text": "redacted"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "sample.txt"
+        },
+        "region": {
+         "startLine": 1
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "CVE-2020-7471",
+     "ruleIndex": 1,
+     "level": "error",
+     "message": {
+      "text": "redacted"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "sample.txt"
+        },
+        "region": {
+         "startLine": 1
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "CVE-2025-64459",
+     "ruleIndex": 2,
+     "level": "error",
+     "message": {
+      "text": "redacted"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "sample.txt"
+        },
+        "region": {
+         "startLine": 1
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "CVE-2018-6188",
+     "ruleIndex": 3,
+     "level": "error",
+     "message": {
+      "text": "redacted"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "sample.txt"
+        },
+        "region": {
+         "startLine": 1
+        }
+       }
+      }
+     ]
+    },
+    {
+     "ruleId": "CVE-2019-3498",
+     "ruleIndex": 4,
+     "level": "error",
+     "message": {
+      "text": "redacted"
+     },
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "sample.txt"
+        },
+        "region": {
+         "startLine": 1
+        }
+       }
+      }
+     ]
+    }
+   ],
+   "columnKind": "utf16CodeUnits"
+  }
+ ]
+}

@@ -1,0 +1,66 @@
+{
+ "version": "2.1.0",
+ "runs": [
+  {
+   "results": [
+    {
+     "locations": [
+      {
+       "physicalLocation": {
+        "artifactLocation": {
+         "uri": "sample.txt"
+        },
+        "region": {
+         "startLine": 1
+        }
+       }
+      }
+     ],
+     "message": {
+      "text": "redacted"
+     },
+     "properties": {},
+     "ruleId": "python.flask.security.injection.tainted-sql-string.tainted-sql-string"
+    }
+   ],
+   "tool": {
+    "driver": {
+     "name": "Semgrep OSS",
+     "rules": [
+      {
+       "defaultConfiguration": {
+        "level": "error"
+       },
+       "fullDescription": {
+        "text": "Detected user input used to manually construct a SQL string. This is usually bad practice because manual construction could accidentally result in a SQL injection. An attacker could use a SQL injection to steal or modify contents of the database. Instead, use a parameterized query which is available by default in most database engines. Alternatively, consider using an object-relational mapper (ORM) such as SQLAlchemy which will protect your queries."
+       },
+       "help": {
+        "markdown": "Detected user input used to manually construct a SQL string. This is usually bad practice because manual construction could accidentally result in a SQL injection. An attacker could use a SQL injection to steal or modify contents of the database. Instead, use a parameterized query which is available by default in most database engines. Alternatively, consider using an object-relational mapper (ORM) such as SQLAlchemy which will protect your queries.\n\n#### \ud83d\udc8e Enable cross-file analysis and Pro rules for free at <a href='https://sg.run/pro'>sg.run/pro</a>\n\n<b>References:</b>\n - [Semgrep Rule](https://semgrep.dev/r/python.flask.security.injection.tainted-sql-string.tainted-sql-string)\n - [https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-textual-sql](https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-textual-sql)\n - [https://www.tutorialspoint.com/sqlalchemy/sqlalchemy_quick_guide.htm](https://www.tutorialspoint.com/sqlalchemy/sqlalchemy_quick_guide.htm)\n - [https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-more-specific-text-with-table-expression-literal-column-and-expression-column](https://docs.sqlalchemy.org/en/14/core/tutorial.html#using-more-specific-text-with-table-expression-literal-column-and-expression-column)\n",
+        "text": "Detected user input used to manually construct a SQL string. This is usually bad practice because manual construction could accidentally result in a SQL injection. An attacker could use a SQL injection to steal or modify contents of the database. Instead, use a parameterized query which is available by default in most database engines. Alternatively, consider using an object-relational mapper (ORM) such as SQLAlchemy which will protect your queries.\n\ud83d\udc8e Enable cross-file analysis and Pro rules for free at sg.run/pro"
+       },
+       "helpUri": "https://semgrep.dev/r/python.flask.security.injection.tainted-sql-string.tainted-sql-string",
+       "id": "python.flask.security.injection.tainted-sql-string.tainted-sql-string",
+       "name": "python.flask.security.injection.tainted-sql-string.tainted-sql-string",
+       "properties": {
+        "precision": "very-high",
+        "tags": [
+         "CWE-704: Incorrect Type Conversion or Cast",
+         "MEDIUM CONFIDENCE",
+         "OWASP-A01:2017 - Injection",
+         "OWASP-A03:2021 - Injection",
+         "OWASP-A05:2025 - Injection",
+         "security"
+        ]
+       },
+       "shortDescription": {
+        "text": "Semgrep Finding: python.flask.security.injection.tainted-sql-string.tainted-sql-string"
+       }
+      }
+     ],
+     "semanticVersion": "1.183.0"
+    }
+   }
+  }
+ ],
+ "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/os/schemas/sarif-schema-2.1.0.json"
+}

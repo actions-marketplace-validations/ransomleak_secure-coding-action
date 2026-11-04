@@ -1,0 +1,31 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": { "name": "CodeQL", "rules": [] },
+        "extensions": [
+          {
+            "name": "codeql/javascript-queries",
+            "rules": [
+              { "id": "js/sql-injection", "properties": { "tags": ["security", "external/cwe/cwe-089", "external/cwe/cwe-090"] } },
+              { "id": "js/unused-rule-never-fired", "properties": { "tags": ["external/cwe/cwe-999"] } }
+            ]
+          }
+        ]
+      },
+      "results": [
+        { "ruleId": "js/sql-injection", "message": { "text": "redacted" }, "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "sample.js" }, "region": { "startLine": 1 } } }] }
+      ]
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "rules": [{ "id": "py/xss", "properties": { "tags": ["external/cwe/cwe-079"] } }]
+        }
+      },
+      "results": [{ "rule": { "id": "py/xss", "index": 0 }, "message": { "text": "redacted" } }]
+    }
+  ]
+}

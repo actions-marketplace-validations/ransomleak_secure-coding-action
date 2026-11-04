@@ -1,0 +1,26 @@
+{
+  "name": "ransomleak-secure-coding-action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Turns SARIF findings on a pull request into free secure-coding lesson links.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "test": "node --test src/sarif.test.ts src/pr-comment-state.test.ts src/lessons.test.ts src/pull-request.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --define:__API_ORIGIN__='\"https://app.ransomleak.com\"' --outfile=dist/index.js",
+    "build:staging": "esbuild src/main.ts --bundle --platform=node --target=node24 --format=esm --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --define:__API_ORIGIN__=\\\"$API_ORIGIN\\\" --outfile=build-staging/index.js"
+  },
+  "dependencies": {
+    "@actions/core": "1.11.1",
+    "@actions/github": "6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.0.0",
+    "esbuild": "0.25.5",
+    "typescript": "5.8.3"
+  }
+}

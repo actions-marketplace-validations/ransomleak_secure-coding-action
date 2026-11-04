@@ -1,0 +1,17 @@
+name: 'RansomLeak Secure Coding Lessons'
+description: 'Comment on pull requests with a short secure-coding lesson for the issue types your scanner finds. Free. No signup.'
+author: 'RansomLeak'
+branding:
+  icon: 'shield'
+  color: 'green'
+inputs:
+  sarif:
+    description: 'Path to a SARIF file produced by your scanner (CodeQL, Semgrep, Trivy, Gitleaks or any SARIF tool).'
+    required: true
+  github-token:
+    description: 'Token used to post the pull request comment. Needs pull-requests: write. Use the default token: a token with a different identity creates a new comment on each rerun instead of updating the first.'
+    required: false
+    default: ${{ github.token }}
+runs:
+  using: 'node24'
+  main: 'dist/index.js'
