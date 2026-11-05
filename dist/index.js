@@ -19666,10 +19666,10 @@ var require_core = __commonJS({
       (0, command_1.issueCommand)("set-env", { name }, convertedVal);
     }
     exports.exportVariable = exportVariable;
-    function setSecret(secret) {
+    function setSecret2(secret) {
       (0, command_1.issueCommand)("add-mask", {}, secret);
     }
-    exports.setSecret = setSecret;
+    exports.setSecret = setSecret2;
     function addPath(inputPath) {
       const filePath = process.env["GITHUB_PATH"] || "";
       if (filePath) {
@@ -23885,7 +23885,7 @@ var require_github = __commonJS({
 // src/main.ts
 var core = __toESM(require_core(), 1);
 var github = __toESM(require_github(), 1);
-import { stat, readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 
 // src/pr-comment-state.ts
 var sanitizeNoteField = (value) => value.replace(/[`<>@\r\n]/g, " ").slice(0, 200);
@@ -24111,11 +24111,379 @@ function extractFindings(sarif) {
   return [...unique.values()].slice(0, MAX_FINDINGS);
 }
 
+// src/sonar-client.ts
+var SONAR_PAGE_SIZE = 500;
+var SONAR_MAX_ISSUES = 2e3;
+var REQUEST_TIMEOUT_MS = 1e4;
+var POLL_INTERVAL_MS = 3e3;
+var SonarError = class extends Error {
+  kind;
+  status;
+  constructor(kind, message, status) {
+    super(message);
+    this.name = "SonarError";
+    this.kind = kind;
+    this.status = status;
+  }
+};
+var isObject2 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+var asArray2 = (v) => Array.isArray(v) ? v : [];
+function isSonarCloud(hostUrl) {
+  try {
+    const host = new URL(hostUrl).hostname.toLowerCase();
+    return host === "sonarcloud.io" || host.endsWith(".sonarcloud.io") || host === "sonarqube.us" || host.endsWith(".sonarqube.us");
+  } catch {
+    return false;
+  }
+}
+function normalizeHostUrl(raw) {
+  try {
+    const url = new URL(raw.trim());
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    if (url.username || url.password || url.search || url.hash) return null;
+    return url.toString().replace(/\/+$/, "");
+  } catch {
+    return null;
+  }
+}
+function parseReportTask(text) {
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^\s*ceTaskId\s*[=:]\s*(\S+)\s*$/.exec(line);
+    if (m && /^[A-Za-z0-9_-]{1,64}$/.test(m[1])) return m[1];
+  }
+  return null;
+}
+async function get(cfg, path, params) {
+  const url = new URL(`${cfg.hostUrl}/${path}`);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  if (cfg.organization) url.searchParams.set("organization", cfg.organization);
+  const doFetch = cfg.fetchImpl ?? fetch;
+  let res;
+  try {
+    res = await doFetch(url, {
+      headers: {
+        // Public SonarQube Cloud projects can be read anonymously, so an empty token sends no credential.
+        ...cfg.token ? { Authorization: `Bearer ${cfg.token}` } : {},
+        Accept: "application/json"
+      },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      redirect: "error"
+    });
+  } catch (error) {
+    throw new SonarError("http", `${path} request failed (${error instanceof Error ? error.name : "error"})`);
+  }
+  if (res.status === 401 || res.status === 403)
+    throw new SonarError("auth", `${path} returned HTTP ${res.status}`, res.status);
+  if (!res.ok) throw new SonarError("http", `${path} returned HTTP ${res.status}`, res.status);
+  try {
+    const body = await res.json();
+    if (!isObject2(body)) throw new Error("not an object");
+    return body;
+  } catch {
+    throw new SonarError("http", `${path} returned a body that is not JSON`);
+  }
+}
+async function waitForAnalysis(cfg, taskId, timeoutSec) {
+  const sleep = cfg.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const deadline = Date.now() + timeoutSec * 1e3;
+  for (; ; ) {
+    const body = await get(cfg, "api/ce/task", { id: taskId });
+    const task = isObject2(body.task) ? body.task : {};
+    const status = String(task.status ?? "");
+    if (status === "SUCCESS") {
+      if (task.pullRequest === void 0 || task.pullRequest === null) {
+        throw new SonarError("no-pr", "the analysis is a branch analysis, not a pull request analysis");
+      }
+      if (String(task.pullRequest) !== cfg.pullRequest) {
+        throw new SonarError("mismatch", "the analysis belongs to a different pull request");
+      }
+      return;
+    }
+    if (status === "FAILED" || status === "CANCELED")
+      throw new SonarError("failed", `the analysis task ended as ${status}`);
+    if (Date.now() + POLL_INTERVAL_MS > deadline)
+      throw new SonarError("timeout", "the analysis did not finish in time");
+    await sleep(POLL_INTERVAL_MS);
+  }
+}
+async function fetchNewVulnerabilityCount(cfg) {
+  let body;
+  try {
+    body = await get(cfg, "api/measures/component", {
+      component: cfg.projectKey,
+      pullRequest: cfg.pullRequest,
+      metricKeys: "new_vulnerabilities"
+    });
+  } catch (error) {
+    if (error instanceof SonarError && (error.status === 404 || error.status === 400)) {
+      throw new SonarError("no-pr", "Sonar has no analysis for this pull request", error.status);
+    }
+    throw error;
+  }
+  const component = isObject2(body.component) ? body.component : {};
+  for (const m of asArray2(component.measures)) {
+    if (!isObject2(m) || m.metric !== "new_vulnerabilities") continue;
+    const period = isObject2(m.period) ? m.period : isObject2(asArray2(m.periods)[0]) ? asArray2(m.periods)[0] : m;
+    const n = Number(period.value ?? m.value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+async function pageAll(cfg, path, params, listKey) {
+  const out = [];
+  for (let p = 1; out.length < SONAR_MAX_ISSUES; p++) {
+    const body = await get(cfg, path, {
+      ...params,
+      p: String(p),
+      ps: String(SONAR_PAGE_SIZE)
+    });
+    const items = asArray2(body[listKey]);
+    out.push(...items);
+    const paging = isObject2(body.paging) ? body.paging : {};
+    const total = Number(paging.total ?? body.total);
+    if (items.length < SONAR_PAGE_SIZE || Number.isFinite(total) && p * SONAR_PAGE_SIZE >= total) break;
+  }
+  return out.slice(0, SONAR_MAX_ISSUES);
+}
+async function fetchPrIssues(cfg, expectedNew) {
+  let issues = null;
+  try {
+    issues = await pageAll(
+      cfg,
+      "api/issues/search",
+      {
+        componentKeys: cfg.projectKey,
+        pullRequest: cfg.pullRequest,
+        types: "VULNERABILITY",
+        resolved: "false"
+      },
+      "issues"
+    );
+  } catch (error) {
+    if (!(error instanceof SonarError) || error.status !== 400 && error.status !== 404) throw error;
+  }
+  if (issues === null || issues.length === 0 && (expectedNew ?? 0) > 0) {
+    try {
+      issues = await pageAll(
+        cfg,
+        "api/issues/list",
+        {
+          project: cfg.projectKey,
+          pullRequest: cfg.pullRequest,
+          types: "VULNERABILITY"
+        },
+        "issues"
+      );
+    } catch (error) {
+      if (!(error instanceof SonarError) || error.status !== 400 && error.status !== 404) throw error;
+      issues = issues ?? [];
+    }
+  }
+  if (issues.length === 0 && (expectedNew ?? 0) > 0) {
+    throw new SonarError("auth", "no issues visible to the token");
+  }
+  return issues.filter(isObject2).filter((i) => i.resolution === void 0 || i.resolution === null);
+}
+async function fetchHotspots(cfg) {
+  const hotspots = await pageAll(
+    cfg,
+    "api/hotspots/search",
+    {
+      projectKey: cfg.projectKey,
+      pullRequest: cfg.pullRequest,
+      status: "TO_REVIEW"
+    },
+    "hotspots"
+  );
+  return hotspots.filter(isObject2);
+}
+async function fetchRuleStandards(cfg, ruleKeys) {
+  const out = /* @__PURE__ */ new Map();
+  for (const key of [...new Set(ruleKeys)]) {
+    try {
+      const body = await get(cfg, "api/rules/show", { key });
+      const rule = isObject2(body.rule) ? body.rule : {};
+      out.set(
+        key,
+        asArray2(rule.securityStandards).filter((s) => typeof s === "string")
+      );
+    } catch (error) {
+      if (error instanceof SonarError && error.kind === "auth") throw error;
+    }
+  }
+  return out;
+}
+async function fetchPullRequestCommit(cfg) {
+  const body = await get(cfg, "api/project_pull_requests/list", { project: cfg.projectKey });
+  for (const pr of asArray2(body.pullRequests)) {
+    if (!isObject2(pr) || String(pr.key) !== cfg.pullRequest) continue;
+    const sha = isObject2(pr.commit) ? pr.commit.sha : void 0;
+    return typeof sha === "string" ? sha : null;
+  }
+  return null;
+}
+
+// src/sonar-findings.ts
+var SONAR_TOOL_NAME = "SonarQube";
+var CWE_STANDARD = /^cwe[:-](\d{1,7})$/i;
+var OWASP_2021_STANDARD = /^owaspTop10-2021:a(\d{1,2})$/i;
+var REPORTED_PROBABILITY = /* @__PURE__ */ new Set(["HIGH", "MEDIUM"]);
+var asArray3 = (v) => Array.isArray(v) ? v : [];
+var strings = (v) => asArray3(v).filter((s) => typeof s === "string");
+function cweFrom(values) {
+  const out = [];
+  for (const v of values) {
+    const m = CWE_STANDARD.exec(v.trim());
+    if (!m) continue;
+    const id = `CWE-${parseInt(m[1], 10)}`;
+    if (!out.includes(id)) out.push(id);
+    if (out.length === MAX_IDENTIFIERS_PER_LIST) break;
+  }
+  return out;
+}
+function owaspFrom(values) {
+  const out = [];
+  for (const v of values) {
+    const m = OWASP_2021_STANDARD.exec(v.trim());
+    if (!m) continue;
+    const id = `A${parseInt(m[1], 10)}:2021`;
+    if (!out.includes(id)) out.push(id);
+    if (out.length === MAX_IDENTIFIERS_PER_LIST) break;
+  }
+  return out;
+}
+function toFinding(standards) {
+  const cwe = cweFrom(standards);
+  const owasp = owaspFrom(standards);
+  if (cwe.length === 0 && owasp.length === 0) return null;
+  const finding = { toolName: SONAR_TOOL_NAME, cwe, cveOrGhsa: false };
+  if (owasp.length > 0) finding.owaspTop10 = owasp;
+  return finding;
+}
+function isSecurityIssue(issue) {
+  if (issue.type === "VULNERABILITY") return true;
+  if (typeof issue.type === "string") return false;
+  return asArray3(issue.impacts).some(
+    (i) => typeof i === "object" && i !== null && i.softwareQuality === "SECURITY"
+  );
+}
+function issueToFinding(issue, ruleStandards) {
+  if (!isSecurityIssue(issue)) return null;
+  const rule = typeof issue.rule === "string" ? issue.rule : null;
+  const standards = rule ? ruleStandards.get(rule) : void 0;
+  return toFinding(standards ?? strings(issue.tags));
+}
+function hotspotToFinding(hotspot, ruleStandards) {
+  if (typeof hotspot.vulnerabilityProbability !== "string") return null;
+  if (!REPORTED_PROBABILITY.has(hotspot.vulnerabilityProbability.toUpperCase())) return null;
+  if (hotspot.status !== void 0 && hotspot.status !== "TO_REVIEW") return null;
+  const rule = typeof hotspot.ruleKey === "string" ? hotspot.ruleKey : null;
+  return toFinding(rule && ruleStandards.get(rule) || []);
+}
+function ruleKeysOf(issues, hotspots) {
+  const keys = /* @__PURE__ */ new Set();
+  for (const i of issues) if (isSecurityIssue(i) && typeof i.rule === "string") keys.add(i.rule);
+  for (const h of hotspots) if (typeof h.ruleKey === "string") keys.add(h.ruleKey);
+  return [...keys];
+}
+function sonarFindings(issues, hotspots, ruleStandards) {
+  const unique = /* @__PURE__ */ new Map();
+  const add = (f) => {
+    if (!f) return;
+    const key = JSON.stringify([f.cwe, f.owaspTop10 ?? []]);
+    if (!unique.has(key)) unique.set(key, f);
+  };
+  for (const i of issues) add(issueToFinding(i, ruleStandards));
+  for (const h of hotspots) add(hotspotToFinding(h, ruleStandards));
+  return [...unique.values()].slice(0, MAX_FINDINGS);
+}
+
+// src/sonar-source.ts
+var SONAR_TOKEN_MESSAGE = "RansomLeak: could not read issues from SonarQube. The token needs Browse permission on the project (use a user token on Server, or a personal or scoped organization token on SonarQube Cloud). No lessons were posted.";
+var SONAR_CLOUD_NO_PR_MESSAGE = "RansomLeak: SonarQube Cloud has not analysed this pull request yet. Check that Automatic Analysis or your CI scan is enabled and has run, or raise sonar-wait-timeout. No lessons were posted.";
+var SONAR_NO_PR_MESSAGE = "RansomLeak: SonarQube has no pull request analysis for this pull request. Community Build does not analyse pull requests. Use the sarif input instead. No lessons were posted.";
+async function pollForHeadCommit(cfg, headSha, timeoutSec) {
+  const sleep = cfg.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const deadline = Date.now() + timeoutSec * 1e3;
+  for (; ; ) {
+    const sha = await fetchPullRequestCommit(cfg);
+    if (sha === headSha) return fetchNewVulnerabilityCount(cfg);
+    if (Date.now() + 5e3 > deadline) {
+      throw sha === null ? new SonarError("no-pr", "Sonar has no analysis for this pull request") : new SonarError("stale", "the latest analysis is for an older commit");
+    }
+    await sleep(5e3);
+  }
+}
+async function pollForPullRequest(cfg, timeoutSec) {
+  const sleep = cfg.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const deadline = Date.now() + timeoutSec * 1e3;
+  for (; ; ) {
+    try {
+      return await fetchNewVulnerabilityCount(cfg);
+    } catch (error) {
+      if (!(error instanceof SonarError) || error.kind !== "no-pr" || Date.now() + 5e3 > deadline) throw error;
+    }
+    await sleep(5e3);
+  }
+}
+async function readSonarFindings(cfg, opts) {
+  try {
+    const taskId = opts.reportTask === null ? null : parseReportTask(opts.reportTask);
+    if (taskId) {
+      await waitForAnalysis(cfg, taskId, opts.waitTimeoutSec);
+    } else {
+      opts.log(
+        isSonarCloud(cfg.hostUrl) && opts.headSha ? "No SonarQube report-task.txt found, so the Action waits for an analysis of this commit." : "No SonarQube report-task.txt found, so the Action reads the latest analysis without waiting."
+      );
+    }
+    const expectedNew = taskId || !isSonarCloud(cfg.hostUrl) ? await fetchNewVulnerabilityCount(cfg) : opts.headSha ? await pollForHeadCommit(cfg, opts.headSha, opts.waitTimeoutSec) : await pollForPullRequest(cfg, opts.waitTimeoutSec);
+    const issues = await fetchPrIssues(cfg, expectedNew);
+    const hotspots = opts.includeHotspots ? await fetchHotspots(cfg) : [];
+    const standards = await fetchRuleStandards(cfg, ruleKeysOf(issues, hotspots));
+    return { findings: sonarFindings(issues, hotspots, standards) };
+  } catch (error) {
+    if (!(error instanceof SonarError)) {
+      return {
+        skip: `RansomLeak: could not read SonarQube results (${error instanceof Error ? error.name : "error"}). No lessons were posted.`
+      };
+    }
+    switch (error.kind) {
+      case "auth":
+        return { skip: SONAR_TOKEN_MESSAGE };
+      case "no-pr":
+        return { skip: isSonarCloud(cfg.hostUrl) ? SONAR_CLOUD_NO_PR_MESSAGE : SONAR_NO_PR_MESSAGE };
+      case "timeout":
+        return {
+          skip: `RansomLeak: the SonarQube analysis did not finish within ${opts.waitTimeoutSec} seconds. No lessons were posted.`
+        };
+      case "stale":
+        return {
+          skip: `RansomLeak: SonarQube had not analysed the latest commit within ${opts.waitTimeoutSec} seconds, so no lessons were posted or changed. Raise sonar-wait-timeout or rerun the job.`
+        };
+      case "mismatch":
+        return {
+          skip: "RansomLeak: the SonarQube analysis is for a different pull request. No lessons were posted."
+        };
+      default:
+        return {
+          skip: `RansomLeak: could not read SonarQube results: ${error.message}. No lessons were posted.`
+        };
+    }
+  }
+}
+
 // src/main.ts
 var AUDIENCE = "ransomleak-jit";
 var TIMEOUT_MS = 1e4;
 var MAX_SARIF_BYTES = 50 * 1024 * 1024;
 var ACTIONS_BOT = "github-actions[bot]";
+var DEFAULT_SONAR_WAIT_SEC = 300;
+var MAX_SONAR_WAIT_SEC = 3600;
+var REPORT_TASK_PATHS = [
+  ".scannerwork/report-task.txt",
+  "target/sonar/report-task.txt",
+  "build/sonar/report-task.txt"
+];
 function describe(error) {
   if (error instanceof SarifError) return error.message;
   const status = error?.status;
@@ -24153,19 +24521,8 @@ async function run() {
     core.warning("Could not read the pull request number. Skipping.");
     return;
   }
-  const sarifPath = core.getInput("sarif", { required: true });
-  let findings;
-  try {
-    const info2 = await stat(sarifPath);
-    if (info2.size > MAX_SARIF_BYTES) {
-      core.warning("The SARIF file is larger than 50MB. Skipping.");
-      return;
-    }
-    findings = extractFindings(await readFile(sarifPath, "utf8"));
-  } catch (error) {
-    core.warning(`Could not read the SARIF file: ${error instanceof SarifError ? error.message : "unreadable"}.`);
-    return;
-  }
+  const findings = await readFindings(pullNumber);
+  if (findings === null) return;
   if (findings.length === 0) {
     core.info("No findings with a CWE, CVE or GHSA identifier or from a secrets scanner. Nothing to send.");
     return;
@@ -24207,6 +24564,72 @@ async function run() {
     return;
   }
   await withTimeout(postComment(lessons, pullNumber, origin), "Comment update");
+}
+async function readFindings(pullNumber) {
+  const sarifPath = core.getInput("sarif");
+  const sonarHost = core.getInput("sonar-host-url");
+  if (sarifPath && sonarHost) {
+    core.warning("Set either `sarif` or the `sonar-*` inputs, not both. Skipping.");
+    return null;
+  }
+  if (sonarHost) return readSonar(sonarHost, pullNumber);
+  if (!sarifPath) {
+    core.warning("Set the `sarif` input, or `sonar-host-url` with the other `sonar-*` inputs. Skipping.");
+    return null;
+  }
+  try {
+    const info2 = await stat(sarifPath);
+    if (info2.size > MAX_SARIF_BYTES) {
+      core.warning("The SARIF file is larger than 50MB. Skipping.");
+      return null;
+    }
+    return extractFindings(await readFile(sarifPath, "utf8"));
+  } catch (error) {
+    core.warning(`Could not read the SARIF file: ${error instanceof SarifError ? error.message : "unreadable"}.`);
+    return null;
+  }
+}
+async function readSonar(rawHost, pullNumber) {
+  const token = core.getInput("sonar-token");
+  if (token) core.setSecret(token);
+  const hostUrl = normalizeHostUrl(rawHost);
+  const projectKey = core.getInput("sonar-project-key");
+  const organization = core.getInput("sonar-organization") || null;
+  if (!hostUrl) {
+    core.warning("`sonar-host-url` is not an http or https URL. Skipping.");
+    return null;
+  }
+  if (!projectKey) {
+    core.warning("The Sonar source needs `sonar-project-key`. Skipping.");
+    return null;
+  }
+  if (!organization && isSonarCloud(hostUrl)) {
+    core.warning("SonarQube Cloud needs `sonar-organization`. Skipping.");
+    return null;
+  }
+  const waitRaw = core.getInput("sonar-wait-timeout");
+  const wait = waitRaw === "" ? DEFAULT_SONAR_WAIT_SEC : Number(waitRaw);
+  const waitTimeoutSec = Number.isFinite(wait) && wait >= 0 ? Math.min(wait, MAX_SONAR_WAIT_SEC) : DEFAULT_SONAR_WAIT_SEC;
+  let reportTask = null;
+  for (const path of REPORT_TASK_PATHS) {
+    reportTask = await readFile(path, "utf8").catch(() => null);
+    if (reportTask !== null) break;
+  }
+  const result = await readSonarFindings(
+    { hostUrl, token, projectKey, organization, pullRequest: String(pullNumber) },
+    {
+      includeHotspots: core.getInput("sonar-include-hotspots").trim().toLowerCase() === "true",
+      waitTimeoutSec,
+      reportTask,
+      headSha: github.context.payload.pull_request?.head?.sha ?? null,
+      log: (line) => core.info(line)
+    }
+  );
+  if ("skip" in result) {
+    core.warning(result.skip);
+    return null;
+  }
+  return result.findings;
 }
 async function postComment(lessons, pullNumber, origin) {
   const { owner, repo } = github.context.repo;
