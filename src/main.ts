@@ -1,18 +1,16 @@
-import { stat, readFile } from 'node:fs/promises';
-
+import { readFile, stat } from 'node:fs/promises';
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 
+import type { CommentLesson } from './pr-comment-state.ts';
+import type { MarkerComment } from './pull-request.ts';
+import type { ActionFinding } from './sarif.ts';
 import { acceptLessons } from './lessons.ts';
-import {
-  type CommentLesson,
-  GITHUB_COMMENT_MARKER,
-  mergeLesson,
-  parseCommentState,
-  renderComment,
-} from './pr-comment-state.ts';
-import { isFromFork, type MarkerComment, planCommentCleanup } from './pull-request.ts';
+import { GITHUB_COMMENT_MARKER, mergeLesson, parseCommentState, renderComment } from './pr-comment-state.ts';
+import { isFromFork, planCommentCleanup } from './pull-request.ts';
 import { extractFindings, SarifError } from './sarif.ts';
+import { isSonarCloud, normalizeHostUrl } from './sonar-client.ts';
+import { readSonarFindings } from './sonar-source.ts';
 
 const AUDIENCE = 'ransomleak-jit';
 /** Fixed at build time by esbuild `define`. The OIDC token must never follow a workflow-controlled value. */
@@ -20,6 +18,14 @@ declare const __API_ORIGIN__: string;
 const TIMEOUT_MS = 10_000;
 const MAX_SARIF_BYTES = 50 * 1024 * 1024;
 const ACTIONS_BOT = 'github-actions[bot]';
+const DEFAULT_SONAR_WAIT_SEC = 300;
+const MAX_SONAR_WAIT_SEC = 3600;
+/** Where the Sonar scanners write the background task id: CLI, Maven, Gradle. */
+const REPORT_TASK_PATHS = [
+  '.scannerwork/report-task.txt',
+  'target/sonar/report-task.txt',
+  'build/sonar/report-task.txt',
+];
 
 /** Nothing here may log a secret, token, path, message or snippet, so errors are described by class and status only. */
 function describe(error: unknown): string {
@@ -62,19 +68,8 @@ async function run(): Promise<void> {
     return;
   }
 
-  const sarifPath = core.getInput('sarif', { required: true });
-  let findings;
-  try {
-    const info = await stat(sarifPath);
-    if (info.size > MAX_SARIF_BYTES) {
-      core.warning('The SARIF file is larger than 50MB. Skipping.');
-      return;
-    }
-    findings = extractFindings(await readFile(sarifPath, 'utf8'));
-  } catch (error) {
-    core.warning(`Could not read the SARIF file: ${error instanceof SarifError ? error.message : 'unreadable'}.`);
-    return;
-  }
+  const findings = await readFindings(pullNumber);
+  if (findings === null) return;
   if (findings.length === 0) {
     core.info('No findings with a CWE, CVE or GHSA identifier or from a secrets scanner. Nothing to send.');
     return;
@@ -121,11 +116,78 @@ async function run(): Promise<void> {
   await withTimeout(postComment(lessons, pullNumber, origin), 'Comment update');
 }
 
-async function postComment(
-  lessons: CommentLesson[],
-  pullNumber: number,
-  origin: string,
-): Promise<void> {
+/** Findings from exactly one source, or null after logging why there are none. */
+async function readFindings(pullNumber: number): Promise<ActionFinding[] | null> {
+  const sarifPath = core.getInput('sarif');
+  const sonarHost = core.getInput('sonar-host-url');
+  if (sarifPath && sonarHost) {
+    core.warning('Set either `sarif` or the `sonar-*` inputs, not both. Skipping.');
+    return null;
+  }
+  if (sonarHost) return readSonar(sonarHost, pullNumber);
+  if (!sarifPath) {
+    core.warning('Set the `sarif` input, or `sonar-host-url` with the other `sonar-*` inputs. Skipping.');
+    return null;
+  }
+  try {
+    const info = await stat(sarifPath);
+    if (info.size > MAX_SARIF_BYTES) {
+      core.warning('The SARIF file is larger than 50MB. Skipping.');
+      return null;
+    }
+    return extractFindings(await readFile(sarifPath, 'utf8'));
+  } catch (error) {
+    core.warning(`Could not read the SARIF file: ${error instanceof SarifError ? error.message : 'unreadable'}.`);
+    return null;
+  }
+}
+
+async function readSonar(rawHost: string, pullNumber: number): Promise<ActionFinding[] | null> {
+  const token = core.getInput('sonar-token');
+  if (token) core.setSecret(token);
+  const hostUrl = normalizeHostUrl(rawHost);
+  const projectKey = core.getInput('sonar-project-key');
+  const organization = core.getInput('sonar-organization') || null;
+  if (!hostUrl) {
+    core.warning('`sonar-host-url` is not an http or https URL. Skipping.');
+    return null;
+  }
+  if (!projectKey) {
+    core.warning('The Sonar source needs `sonar-project-key`. Skipping.');
+    return null;
+  }
+  if (!organization && isSonarCloud(hostUrl)) {
+    core.warning('SonarQube Cloud needs `sonar-organization`. Skipping.');
+    return null;
+  }
+  const waitRaw = core.getInput('sonar-wait-timeout');
+  const wait = waitRaw === '' ? DEFAULT_SONAR_WAIT_SEC : Number(waitRaw);
+  const waitTimeoutSec =
+    Number.isFinite(wait) && wait >= 0 ? Math.min(wait, MAX_SONAR_WAIT_SEC) : DEFAULT_SONAR_WAIT_SEC;
+
+  let reportTask: string | null = null;
+  for (const path of REPORT_TASK_PATHS) {
+    reportTask = await readFile(path, 'utf8').catch(() => null);
+    if (reportTask !== null) break;
+  }
+  const result = await readSonarFindings(
+    { hostUrl, token, projectKey, organization, pullRequest: String(pullNumber) },
+    {
+      includeHotspots: core.getInput('sonar-include-hotspots').trim().toLowerCase() === 'true',
+      waitTimeoutSec,
+      reportTask,
+      headSha: github.context.payload.pull_request?.head?.sha ?? null,
+      log: (line) => core.info(line),
+    },
+  );
+  if ('skip' in result) {
+    core.warning(result.skip);
+    return null;
+  }
+  return result.findings;
+}
+
+async function postComment(lessons: CommentLesson[], pullNumber: number, origin: string): Promise<void> {
   const { owner, repo } = github.context.repo;
   const octokit = github.getOctokit(core.getInput('github-token'));
   const listMine = async (): Promise<MarkerComment[]> => {

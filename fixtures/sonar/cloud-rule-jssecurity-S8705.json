@@ -1,0 +1,21 @@
+{
+  "rule": {
+    "key": "jssecurity:S8705",
+    "repo": "jssecurity",
+    "name": "Agentic workflows should not be vulnerable to argument injection attacks",
+    "type": "VULNERABILITY",
+    "securityStandards": [
+      "cwe:20",
+      "cwe:88"
+    ],
+    "sysTags": [
+      "cwe"
+    ],
+    "impacts": [
+      {
+        "softwareQuality": "SECURITY",
+        "severity": "HIGH"
+      }
+    ]
+  }
+}

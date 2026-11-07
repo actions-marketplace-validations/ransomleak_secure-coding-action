@@ -1,0 +1,19 @@
+{
+  "component": {
+    "key": "cozyGarage_BookiE",
+    "qualifier": "TRK",
+    "measures": [
+      {
+        "metric": "new_vulnerabilities",
+        "periods": [
+          {
+            "index": 1,
+            "value": "2",
+            "bestValue": false
+          }
+        ]
+      }
+    ],
+    "pullRequest": "2484"
+  }
+}

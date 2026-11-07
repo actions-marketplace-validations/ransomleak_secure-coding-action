@@ -6,12 +6,32 @@ branding:
   color: 'green'
 inputs:
   sarif:
-    description: 'Path to a SARIF file produced by your scanner (CodeQL, Semgrep, Trivy, Gitleaks or any SARIF tool).'
-    required: true
+    description: 'Path to a SARIF file produced by your scanner (CodeQL, Semgrep, Trivy, Gitleaks or any SARIF tool). Required unless you use the sonar-* inputs. Use one source, not both.'
+    required: false
   github-token:
     description: 'Token used to post the pull request comment. Needs pull-requests: write. Use the default token: a token with a different identity creates a new comment on each rerun instead of updating the first.'
     required: false
     default: ${{ github.token }}
+  sonar-host-url:
+    description: 'SonarQube Server or SonarQube Cloud URL, for example https://sonarcloud.io. Setting it reads findings from Sonar instead of a SARIF file.'
+    required: false
+  sonar-token:
+    description: 'Sonar token with Browse permission on the project: a user token on Server, a personal or scoped organization token on SonarQube Cloud. Only sent to sonar-host-url.'
+    required: false
+  sonar-project-key:
+    description: 'Sonar project key.'
+    required: false
+  sonar-organization:
+    description: 'SonarQube Cloud organization key. Required on SonarQube Cloud, not used on Server.'
+    required: false
+  sonar-include-hotspots:
+    description: 'Also use security hotspots rated HIGH or MEDIUM that are still to review.'
+    required: false
+    default: 'false'
+  sonar-wait-timeout:
+    description: 'Seconds to wait for the Sonar analysis of this run to finish.'
+    required: false
+    default: '300'
 runs:
   using: 'node24'
   main: 'dist/index.js'

@@ -1,0 +1,101 @@
+{
+  "total": 2,
+  "p": 1,
+  "ps": 500,
+  "paging": {
+    "pageIndex": 1,
+    "pageSize": 500,
+    "total": 2
+  },
+  "issues": [
+    {
+      "key": "AaGrHO0drVVTDsVbG4Ik",
+      "rule": "javascript:S4036",
+      "severity": "MINOR",
+      "component": "cozyGarage_BookiE:experiments/tauri-grid-prototype/selftest.mjs",
+      "project": "cozyGarage_BookiE",
+      "line": 8,
+      "textRange": {
+        "startLine": 8,
+        "endLine": 8,
+        "startOffset": 20,
+        "endOffset": 38
+      },
+      "status": "OPEN",
+      "message": "Make sure the \"PATH\" variable only contains fixed, unwriteable directories.",
+      "tags": [
+        "cwe",
+        "former-hotspot"
+      ],
+      "type": "VULNERABILITY",
+      "organization": "cozygarage",
+      "pullRequest": "2484",
+      "impacts": [
+        {
+          "softwareQuality": "SECURITY",
+          "severity": "LOW"
+        }
+      ],
+      "issueStatus": "OPEN"
+    },
+    {
+      "key": "AaGrHO0drVVTDsVbG4Il",
+      "rule": "jssecurity:S8705",
+      "severity": "MAJOR",
+      "component": "cozyGarage_BookiE:experiments/tauri-grid-prototype/selftest.mjs",
+      "project": "cozyGarage_BookiE",
+      "line": 8,
+      "textRange": {
+        "startLine": 8,
+        "endLine": 8,
+        "startOffset": 14,
+        "endOffset": 19
+      },
+      "status": "OPEN",
+      "message": "Command Argument Injection via faulty LLM-supplied CLI arguments",
+      "tags": [
+        "cwe"
+      ],
+      "type": "VULNERABILITY",
+      "organization": "cozygarage",
+      "pullRequest": "2484",
+      "impacts": [
+        {
+          "softwareQuality": "SECURITY",
+          "severity": "HIGH"
+        }
+      ],
+      "issueStatus": "OPEN"
+    }
+  ],
+  "components": [
+    {
+      "organization": "cozygarage",
+      "key": "cozyGarage_BookiE",
+      "uuid": "AaGrG3neDR6zicSuw87N",
+      "enabled": true,
+      "qualifier": "TRK",
+      "name": "BookiE",
+      "longName": "BookiE",
+      "pullRequest": "2484"
+    },
+    {
+      "organization": "cozygarage",
+      "key": "cozyGarage_BookiE:experiments/tauri-grid-prototype/selftest.mjs",
+      "uuid": "AaGrHOnGrVVTDsVbG39E",
+      "enabled": true,
+      "qualifier": "FIL",
+      "name": "selftest.mjs",
+      "longName": "experiments/tauri-grid-prototype/selftest.mjs",
+      "path": "experiments/tauri-grid-prototype/selftest.mjs",
+      "pullRequest": "2484"
+    }
+  ],
+  "organizations": [
+    {
+      "key": "cozygarage",
+      "name": "Trung Nguyen"
+    }
+  ],
+  "facets": []
+}

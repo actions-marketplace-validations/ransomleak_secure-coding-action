@@ -1,0 +1,74 @@
+{
+  "paging": {
+    "pageIndex": 1,
+    "pageSize": 2,
+    "total": 4
+  },
+  "hotspots": [
+    {
+      "key": "AZl0oN175O0O3whrSLyl",
+      "component": "adaptris_interlok-cache:.github/workflows/approve-merge-dependabot-pr-trigger.yml",
+      "project": "adaptris_interlok-cache",
+      "securityCategory": "others",
+      "vulnerabilityProbability": "LOW",
+      "status": "TO_REVIEW",
+      "line": 9,
+      "message": "Use full commit SHA hash for this dependency.",
+      "creationDate": "2023-04-18T06:23:24+0000",
+      "updateDate": "2025-09-23T03:31:33+0000",
+      "textRange": {
+        "startLine": 9,
+        "endLine": 9,
+        "startOffset": 10,
+        "endOffset": 108
+      },
+      "flows": [],
+      "ruleKey": "githubactions:S7637"
+    },
+    {
+      "key": "AZl0oN2-5O0O3whrSLyn",
+      "component": "adaptris_interlok-cache:.github/workflows/approve-merge-dependabot-pr.yml",
+      "project": "adaptris_interlok-cache",
+      "securityCategory": "others",
+      "vulnerabilityProbability": "LOW",
+      "status": "TO_REVIEW",
+      "line": 11,
+      "message": "Use full commit SHA hash for this dependency.",
+      "creationDate": "2023-04-18T06:23:24+0000",
+      "updateDate": "2025-09-23T03:31:33+0000",
+      "textRange": {
+        "startLine": 11,
+        "endLine": 11,
+        "startOffset": 10,
+        "endOffset": 100
+      },
+      "flows": [],
+      "ruleKey": "githubactions:S7637"
+    }
+  ],
+  "components": [
+    {
+      "organization": "adaptris-org",
+      "key": "adaptris_interlok-cache:.github/workflows/approve-merge-dependabot-pr-trigger.yml",
+      "qualifier": "FIL",
+      "name": "approve-merge-dependabot-pr-trigger.yml",
+      "longName": ".github/workflows/approve-merge-dependabot-pr-trigger.yml",
+      "path": ".github/workflows/approve-merge-dependabot-pr-trigger.yml"
+    },
+    {
+      "organization": "adaptris-org",
+      "key": "adaptris_interlok-cache:.github/workflows/approve-merge-dependabot-pr.yml",
+      "qualifier": "FIL",
+      "name": "approve-merge-dependabot-pr.yml",
+      "longName": ".github/workflows/approve-merge-dependabot-pr.yml",
+      "path": ".github/workflows/approve-merge-dependabot-pr.yml"
+    },
+    {
+      "organization": "adaptris-org",
+      "key": "adaptris_interlok-cache",
+      "qualifier": "TRK",
+      "name": "interlok-cache",
+      "longName": "interlok-cache"
+    }
+  ]
+}

@@ -12,6 +12,8 @@ export interface ActionFinding {
   toolName: string | null;
   cwe: string[];
   cveOrGhsa: boolean;
+  /** OWASP Top 10 2021 categories (`A10:2021`). Sonar only; the backend uses a few when no CWE matches. */
+  owaspTop10?: string[];
 }
 
 export class SarifError extends Error {
